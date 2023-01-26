@@ -79,6 +79,11 @@ ui <- fluidPage(
 # Server logic ----
 server <- function(input, output) {
   
+  codon_usage_tab_active <- reactiveVal()
+  codon_usage_tab_active_split <- reactive(
+    split(codon_usage_tab_active(), codon_usage_tab_active()$aa_single)
+  )
+  
   retrieve_input_seqs <- eventReactive(
     input$submit, {
       if (!is.null(input$sequence_input_fasta$name)) {
@@ -90,9 +95,6 @@ server <- function(input, output) {
         message("Processing text area input")
         sequence_input <- input$sequence_input
       }
-      # message("Hello", input$sequence_input_fasta$name)
-      #conditional retrieval - ???
-      # sequence_input <- str_replace_all(sequence_input, pattern = "\\h|\\.", replacement = "")
       tmp_file <- tempfile(fileext = ".fasta")
       ## TO DO: remove spaces, points, digits
       writeLines(sequence_input, con = tmp_file)
@@ -120,14 +122,12 @@ server <- function(input, output) {
   generate_reverse_translation <- reactive({
     input_seqs <- retrieve_input_seqs()
     exclusion_sites <- collect_cut_sites()
-    # message("input_seqs is ", input_seqs)
-    #browser()
     reverse_translated <- 
       lapply(input_seqs, 
              function(seq) {
                ## TO DO: passing names is not working atm
                reverse_translate(aa_seq = seq, aa_seq_name = names(seq), 
-                                 codon_usage_tables = codon_usage_tables_split[[input$codon_choice]],  
+                                 codon_usage_tables = isolate(codon_usage_tab_active_split()),  
                                  exclude_sites = exclusion_sites)
              }) %>% 
       DNAStringSet()
@@ -141,6 +141,27 @@ server <- function(input, output) {
     reverse_translated <- paste0(">", names(reverse_translated), "\n", reverse_translated, collapse = "\n")
     return(reverse_translated)
   })
+  
+  observeEvent(
+    input$codon_choice, {
+      message("observeEvent triggered by input$codon_choice")
+      codon_usage_tab_active(codon_usage_tables[[input$codon_choice]])
+  })
+  
+  observeEvent(
+    input$codon_table_user, {
+      message("observeEvent triggered by input$codon_table_user")
+      codon_usage_tab_active(import_codon_usage_table(input$codon_table_user$datapath))
+    })
+  
+  observeEvent(
+    input$radio, {
+      if (input$radio == "From species") {
+        req(input$codon_choice)
+        codon_usage_tab_active(codon_usage_tables[[input$codon_choice]])
+      }
+    }
+  )
   
   output$reverse_translation <- renderText({
     generate_reverse_translation()
@@ -179,12 +200,11 @@ server <- function(input, output) {
   
   output$codon_usage_table <- 
     renderDT({
-      # execute only if choice is not NULL
-      req(input$codon_choice)
-      codon_usage_tables[[input$codon_choice]]
-      #codon_usage_tbl_yeast
+      codon_usage_tab_active()
     }, 
-    options = list(pageLength = 10))
+      options = list(pageLength = 10)
+    )
+  
 }
 
 # Run app ----

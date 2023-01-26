@@ -113,6 +113,13 @@ codon_usage_tbl_yeast <-
 
 codon_usage_tbl_yeast_split <- split(codon_usage_tbl_yeast, codon_usage_tbl_yeast$aa_single)
 
+import_codon_usage_table <- function(path) {
+  tab <- read_csv(path)
+  ## TO DO: some sanity checks have to be more verbose/extensive
+  stopifnot(ncol(tab) == 4)
+  colnames(tab) <- c("aa_single", "aa_triple", "codon", "codon_frequency")
+  return(tab)
+}
 
 codon_usage_tables <- list(
   "sc" = codon_usage_tbl_yeast, 
@@ -125,7 +132,6 @@ codon_usage_tables_split <-
     if (is.null(tab)) return(NULL)
     split(tab, tab$aa_single)
   })
-
 
 enzymes <- 
   read_tsv("./data/enzymes_and_sequences.tsv", 
