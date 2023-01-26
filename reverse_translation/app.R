@@ -121,12 +121,13 @@ server <- function(input, output) {
     input_seqs <- retrieve_input_seqs()
     exclusion_sites <- collect_cut_sites()
     # message("input_seqs is ", input_seqs)
+    #browser()
     reverse_translated <- 
       lapply(input_seqs, 
              function(seq) {
                ## TO DO: passing names is not working atm
                reverse_translate(aa_seq = seq, aa_seq_name = names(seq), 
-                                 codon_usage_tables = codon_usage_tbl_yeast_split, 
+                                 codon_usage_tables = codon_usage_tables_split[[input$codon_choice]],  
                                  exclude_sites = exclusion_sites)
              }) %>% 
       DNAStringSet()
@@ -164,7 +165,9 @@ server <- function(input, output) {
   output$codon_choice <- renderUI({
     if (input$radio == "From species") {
       selectInput("codon_choice", "",
-                  choices = c("S. cerevisiae", "E. coli", "H. sapiens"))
+                  #choices = c("S. cerevisiae", "E. coli", "H. sapiens"))
+                  choices = list("S. cerevisiae" = "sc", "E. coli" = "ec", "H. sapiens" = "hs"), 
+                  selected = "sc")
     } else if (input$radio == "User defined") {
       fileInput(
         "codon_table_user", 
@@ -176,7 +179,10 @@ server <- function(input, output) {
   
   output$codon_usage_table <- 
     renderDT({
-      codon_usage_tbl_yeast
+      # execute only if choice is not NULL
+      req(input$codon_choice)
+      codon_usage_tables[[input$codon_choice]]
+      #codon_usage_tbl_yeast
     }, 
     options = list(pageLength = 10))
 }

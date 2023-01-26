@@ -3,6 +3,9 @@ reverse_translate <- function(aa_seq, codon_usage_tables, aa_seq_name = "", excl
   # aa_seq: a sequence of amino acids
   # exclude_sites: a character vector of restriction enzyme cutting sites that 
   # need to be excluded
+  if (! "codon_frequency" %in% colnames(bind_rows(codon_usage_tables))) {
+    stop("Column 'codon_frequency' missing in codon_usage_tables. Please provide a column with the frequencies at which codons should be picked.")
+  }
   aa_seq <- toupper(as.character(aa_seq))
   allowed_letters <- c("G", "A", "L", "M", "F", "W", "K", "Q", "E", "S", 
                        "P", "V", "I", "C", "Y", "H", "R", "N", "D", "T")
@@ -19,11 +22,11 @@ reverse_translate <- function(aa_seq, codon_usage_tables, aa_seq_name = "", excl
   while (cur_ind <= last_ind) {
     #test_passed <- FALSE
     n_repeats <- 0
-    weight_var <- "sampling_weight_adj"
+    weight_var <- "codon_frequency"
     repeat {
       aa <- aa_seq_split[cur_ind]
       
-      if (n_repeats > 20) weight_var <- "sampling_weight"
+      if (n_repeats > 20) weight_var <- NULL
       
       codon <- aa_to_codon_optimised(aa, 
                                      codon_usage_table = codon_usage_tables[[aa]], 
@@ -56,11 +59,16 @@ reverse_translate <- function(aa_seq, codon_usage_tables, aa_seq_name = "", excl
 
 
 aa_to_codon_optimised <- function(aa, codon_usage_table, 
-                                  weight_var = "sampling_weight_adj") {
+                                  weight_var = "codon_frequency") {
   # reverse translates a single amino acid using a codon usage table
+  if (!is.null(weight_var)) {
+    probs = codon_usage_table[[weight_var]]
+  } else {
+    probs = NULL
+  }
   codon <- sample(x = codon_usage_table[["codon"]], 
                   size = 1, 
-                  prob = codon_usage_table[[weight_var]])
+                  prob = probs)
   return(codon)
 }
 
@@ -90,28 +98,37 @@ get_gc_content <- function(nt_seq) {
 }
 
 
-get_data <- function() {
-  codon_usage_tbl_yeast <<- 
-    read_tsv("/Users/fhuber/PROJEKTE/SynBioTools/reverse_translation/data/codon_usage_table_highly_expressed_genes.tsv", 
-             locale = locale(decimal_mark = ",")) %>% 
-    janitor::clean_names()
-  # exclude everything below 0.1
-  codon_usage_tbl_yeast$frequency_adj <<- ifelse(codon_usage_tbl_yeast$frequency < 0.1, 0, codon_usage_tbl_yeast$frequency)
-  
-  codon_usage_tbl_yeast_split <- split(codon_usage_tbl_yeast, codon_usage_tbl_yeast$aa_single)
-  codon_usage_tbl_yeast_split <<- 
-    map(codon_usage_tbl_yeast_split, function(tab) {
-      tab$sampling_weight <- tab$frequency / sum(tab$frequency)
-      tab$sampling_weight_adj <- tab$frequency_adj / sum(tab$frequency_adj)
-      return(tab)
-    })
-}
+codon_usage_tbl_yeast <- 
+  read_tsv("./data/codon_usage_table_highly_expressed_genes.tsv", 
+           locale = locale(decimal_mark = ",")) %>% 
+  janitor::clean_names() %>% 
+  mutate(frequency_adj = ifelse(frequency < 0.1, 0, frequency)) %>% 
+  group_by(aa_single) %>% 
+  # mathematically not necessary but easier to interpret if sum of weights is 1
+  mutate(frequency_adj = frequency_adj / sum(frequency_adj)) %>% 
+  ungroup() %>% 
+  dplyr::rename(sampling_weight = frequency, sampling_weight_adj = frequency_adj) %>% 
+  dplyr::select(-sampling_weight) %>% 
+  dplyr::rename(codon_frequency = sampling_weight_adj)
 
-get_data()
+codon_usage_tbl_yeast_split <- split(codon_usage_tbl_yeast, codon_usage_tbl_yeast$aa_single)
+
+
+codon_usage_tables <- list(
+  "sc" = codon_usage_tbl_yeast, 
+  "ec" = NULL, 
+  "hs" = NULL
+)
+
+codon_usage_tables_split <- 
+  lapply(codon_usage_tables, function(tab) {
+    if (is.null(tab)) return(NULL)
+    split(tab, tab$aa_single)
+  })
 
 
 enzymes <- 
-  read_tsv("/Users/fhuber/PROJEKTE/SynBioTools/reverse_translation/data/enzymes_and_sequences.tsv", 
+  read_tsv("./data/enzymes_and_sequences.tsv", 
            col_names = c("enzyme", "cut_site")) %>% 
   deframe()
   
