@@ -105,14 +105,17 @@ enzymes <-
            col_names = c("enzyme", "cut_site")) %>% 
   deframe()
 
+import_codon_usage_table <- function(path) {
+  tab <- read_csv(path)
+  ## TO DO: some sanity checks have to be more verbose/extensive
+  stopifnot(ncol(tab) == 4)
+  colnames(tab) <- c("aa_single", "aa_triple", "codon", "codon_frequency")
+  return(tab)
+}
+
+
 codon_usage_tables <- readRDS("./data/codon_usage_tables.rds")
 
-
-# codon_usage_tables <- list(
-#   "sc" = codon_usage_tbl_yeast, 
-#   "ec" = NULL, 
-#   "hs" = NULL
-# )
 
 codon_usage_tables_split <- 
   lapply(codon_usage_tables, function(tab) {

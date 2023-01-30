@@ -1,4 +1,8 @@
 # Load packages ----
+# see here: https://community.rstudio.com/t/failing-to-deploy-shinyapp-depending-on-bioconductor-packages/6970/4
+library(BiocManager)
+options(repos = BiocManager::repositories())
+
 library(shiny)
 library(Biostrings)
 library(magrittr)

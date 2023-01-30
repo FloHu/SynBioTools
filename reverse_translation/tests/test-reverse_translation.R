@@ -3,13 +3,13 @@ library(testthat)
 source("./reverse_translation/reverse_translation.R")
 
 enzymes <- 
-  read_tsv("/Users/fhuber/PROJEKTE/SynBioTools/reverse_translation/data/enzymes_and_sequences.tsv", 
+  read_tsv("./data/enzymes_and_sequences.tsv", 
            col_names = c("enzyme", "cut_site")) %>% 
   deframe()
 
 get_data <- function() {
   codon_usage_tbl_yeast <<- 
-    read_tsv("/Users/fhuber/PROJEKTE/SynBioTools/reverse_translation/data/codon_usage_table_highly_expressed_genes.tsv", 
+    read_tsv("./data/codon_usage_table_highly_expressed_genes.tsv", 
              locale = locale(decimal_mark = ",")) %>% 
     janitor::clean_names()
   # exclude everything below 0.1
@@ -25,7 +25,7 @@ get_data <- function() {
 }
 
 
-test_seqs <- readAAStringSet("./reverse_translation/data/test.fasta")
+test_seqs <- readAAStringSet("./data/test.fasta")
 
 reverse_translate(test_seqs[1], codon_usage_tables = codon_usage_tbl_yeast_split)
 
