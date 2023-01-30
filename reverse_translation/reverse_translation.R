@@ -8,7 +8,7 @@ reverse_translate <- function(aa_seq, codon_usage_tables, aa_seq_name = "", excl
   }
   aa_seq <- toupper(as.character(aa_seq))
   allowed_letters <- c("G", "A", "L", "M", "F", "W", "K", "Q", "E", "S", 
-                       "P", "V", "I", "C", "Y", "H", "R", "N", "D", "T")
+                       "P", "V", "I", "C", "Y", "H", "R", "N", "D", "T", "*")
   stopifnot(length(aa_seq) == 1)
   aa_seq_split <- strsplit(aa_seq, split = "")[[1]]
   aa_seq_split <- aa_seq_split[aa_seq_split %in% allowed_letters]

@@ -77,6 +77,11 @@ ui <- fluidPage(
       h3("Used codon usage table:"), 
       DTOutput("codon_usage_table")
     )
+  ), 
+  hr(), 
+  div(
+    class = "footer",
+    includeHTML("footer.html")
   )
 )
 
