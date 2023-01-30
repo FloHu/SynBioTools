@@ -51,6 +51,9 @@ reverse_translate <- function(aa_seq, codon_usage_tables, aa_seq_name = "", excl
   }
   nt_seq_collapsed <- DNAString(paste0(nt_seq, collapse = ""))
   # make the test:
+  ## no.init.codon = TRUE: important! otherwise if and only if TTG and CTG are the first 
+  # codon they will be translated as M instead of L, see here:
+  # https://github.com/Bioconductor/Biostrings/issues/15
   backtranslated <- as.character(Biostrings::translate(nt_seq_collapsed, 
                                                        no.init.codon = TRUE))
   stopifnot(identical(unname(aa_seq), unname(backtranslated)))
@@ -97,35 +100,19 @@ get_gc_content <- function(nt_seq) {
   return(gc_content)
 }
 
+enzymes <- 
+  read_tsv("./data/enzymes_and_sequences.tsv", 
+           col_names = c("enzyme", "cut_site")) %>% 
+  deframe()
 
-codon_usage_tbl_yeast <- 
-  read_tsv("./data/codon_usage_table_highly_expressed_genes.tsv", 
-           locale = locale(decimal_mark = ",")) %>% 
-  janitor::clean_names() %>% 
-  mutate(frequency_adj = ifelse(frequency < 0.1, 0, frequency)) %>% 
-  group_by(aa_single) %>% 
-  # mathematically not necessary but easier to interpret if sum of weights is 1
-  mutate(frequency_adj = frequency_adj / sum(frequency_adj)) %>% 
-  ungroup() %>% 
-  dplyr::rename(sampling_weight = frequency, sampling_weight_adj = frequency_adj) %>% 
-  dplyr::select(-sampling_weight) %>% 
-  dplyr::rename(codon_frequency = sampling_weight_adj)
+codon_usage_tables <- readRDS("./data/codon_usage_tables.rds")
 
-codon_usage_tbl_yeast_split <- split(codon_usage_tbl_yeast, codon_usage_tbl_yeast$aa_single)
 
-import_codon_usage_table <- function(path) {
-  tab <- read_csv(path)
-  ## TO DO: some sanity checks have to be more verbose/extensive
-  stopifnot(ncol(tab) == 4)
-  colnames(tab) <- c("aa_single", "aa_triple", "codon", "codon_frequency")
-  return(tab)
-}
-
-codon_usage_tables <- list(
-  "sc" = codon_usage_tbl_yeast, 
-  "ec" = NULL, 
-  "hs" = NULL
-)
+# codon_usage_tables <- list(
+#   "sc" = codon_usage_tbl_yeast, 
+#   "ec" = NULL, 
+#   "hs" = NULL
+# )
 
 codon_usage_tables_split <- 
   lapply(codon_usage_tables, function(tab) {
@@ -133,9 +120,6 @@ codon_usage_tables_split <-
     split(tab, tab$aa_single)
   })
 
-enzymes <- 
-  read_tsv("./data/enzymes_and_sequences.tsv", 
-           col_names = c("enzyme", "cut_site")) %>% 
-  deframe()
+
   
 

@@ -30,7 +30,7 @@ ui <- fluidPage(
       
       actionButton(
         "submit", 
-        "Submit"
+        "Reverse translate!"
       ), 
       
       fluidRow(
@@ -129,8 +129,8 @@ server <- function(input, output) {
                reverse_translate(aa_seq = seq, aa_seq_name = names(seq), 
                                  codon_usage_tables = isolate(codon_usage_tab_active_split()),  
                                  exclude_sites = exclusion_sites)
-             }) %>% 
-      DNAStringSet()
+             })
+    reverse_translated <- DNAStringSet(reverse_translated)
     not_successful <- paste0(names(reverse_translated)[lengths(reverse_translated) == 0], collapse = "\n")
     if (nchar(not_successful) > 0) {
       msg <- paste0("Reverse translation under the provided constraints was not successful for the following sequences:\n", not_successful)
@@ -145,6 +145,7 @@ server <- function(input, output) {
   observeEvent(
     input$codon_choice, {
       message("observeEvent triggered by input$codon_choice")
+      #browser()
       codon_usage_tab_active(codon_usage_tables[[input$codon_choice]])
   })
   
@@ -185,10 +186,15 @@ server <- function(input, output) {
   
   output$codon_choice <- renderUI({
     if (input$radio == "From species") {
-      selectInput("codon_choice", "",
+      selectInput("codon_choice", label = '"rare codons excluded": codons with a frequency < 0.1 are only considered if sequence exclusion constraints cannot otherwise be satisfied',
                   #choices = c("S. cerevisiae", "E. coli", "H. sapiens"))
-                  choices = list("S. cerevisiae" = "sc", "E. coli" = "ec", "H. sapiens" = "hs"), 
-                  selected = "sc")
+                  choices = list("S. cerevisiae" = "codon_usage_tbl_yeast", 
+                                 "S. cerevisiae, rare codons excluded" = "codon_usage_tbl_yeast_rare_excluded", 
+                                 "E. coli" = "codon_usage_tbl_ecoli", 
+                                 "E. coli, rare codons excluded" = "codon_usage_tbl_ecoli_rare_excluded", 
+                                 "H. sapiens" = "codon_usage_tbl_hsapiens", 
+                                 "H. sapiens, rare codons excluded" = "codon_usage_tbl_hsapiens_rare_excluded"), 
+                  selected = "codon_usage_tbl_yeast_rare_excluded")
     } else if (input$radio == "User defined") {
       fileInput(
         "codon_table_user", 
